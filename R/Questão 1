@@ -1,0 +1,45 @@
+##QUESTÃO 1 - Aumento no tamanho do fragmento causa aumento na riqueza de espécies de plantas
+
+##modelo de poisson construído para riqueza:
+modelopoisson = glm(riqueza ~  fragmento, ##riqueza de acordo com o tamanho do fragmento
+                    family = "poisson", data = dados) ##familia usada é poisson
+summary(modelopoisson) ##p deu significativo (então a variável fragmento é significativa)
+
+##testando se há overdispersion
+check_overdispersion(modelopoisson) ##overdispersion detectada
+
+##utilizar a distribuição quasipoisson devido a overdispersion
+modeloquasi = glm(riqueza ~ fragmento,
+                  family = "quasipoisson", data = dados)
+summary(modeloquasi)
+
+check_overdispersion(modeloquasi) ##overdispersion detectada
+
+##utilizar modelo glm binomial negativo devido a overdispersion
+modelobn = glm.nb(riqueza ~ fragmento, 
+                  data = dados)
+summary(modelobn)
+
+check_overdispersion(modelobn) ##overdispersion não detectada
+
+##modelo escolhido: binomial negativo
+##então cria um modelo nulo e faz a comparação por anova e AICc
+modelonulo = glm.nb(riqueza ~ 1, data = dados)
+anova(modelobn, modelonulo) ##p deu significativo
+AIC(modelobn, modelonulo) ##aic do modelo bn deu menor que do nulo
+##então o modelo bn explica melhor que o nulo, uso ele para montar os gráficos
+
+##plotando o gráfico
+dados_g1 = augment(modelobn, type.predict = "response", se_fit = T)
+head(dados_g1)
+
+grafico1 =
+  ggplot(dados_g1, aes(x = fragmento)) +
+  geom_line(aes(y = .fitted), color = "blue") +
+  geom_ribbon(aes(ymin = .fitted - .se.fit, ymax = .fitted + .se.fit), 
+              fill= "cornflowerblue", alpha = 0.4)+
+  labs(x = "Tamanho do fragmento", y = "Riqueza de espécies de plantas") +
+  geom_point(aes(y = riqueza), color = "black")
+grafico1
+
+##resultado: o aumento no tamanho do fragmento causa um aumento na riqueza de espécies de plantas
